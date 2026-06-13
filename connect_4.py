@@ -5,6 +5,8 @@ red = 1
 yellow = 2
 red_piece = "\033[1;31m●\033[0m"
 yellow_piece = "\033[1;33m●\033[0m"
+red_winning_piece = "\033[1;31;42m●\033[0m"
+yellow_winning_piece = "\033[1;33;42m●\033[0m"
 
 
 def make_grid():
@@ -17,12 +19,30 @@ def make_grid():
     return grid
 
 
-def print_grid(grid):
+def print_grid(grid, winning_pieces=[]):
     print("1 2 3 4 5 6 7")
-    symbols = {0: "_", 1: red_piece, 2: yellow_piece}
-    for row in grid:
-        for num in row:
-            print(symbols[num], end=" ")
+
+    for i, row in enumerate(grid):
+        for j, num in enumerate(row):
+
+            # Highlight the winning pieces
+            if (i, j) in winning_pieces:
+                if num == 1:
+                    symbol = red_winning_piece
+                elif num == 2:
+                    symbol = yellow_winning_piece
+                else:
+                    symbol = "_"
+
+            else:
+                if num == 1:
+                    symbol = red_piece
+                elif num == 2:
+                    symbol = yellow_piece
+                else:
+                    symbol = "_"
+
+            print(symbol, end=" ")
         print()
     print()
 
@@ -40,14 +60,14 @@ def computer_move(grid, colour, opponent_colour):
     for col in range(1, 8):
         test_grid = [row[:] for row in grid]
         drop_piece(test_grid, col, colour)
-        if check_win(test_grid, colour):
+        if check_win(test_grid, colour)[0]:
             return col
 
     # Priority 2: Is the opponent about to win? If so return the column that will block.
     for col in range(1, 8):
         test_grid = [row[:] for row in grid]
         drop_piece(test_grid, col, opponent_colour)
-        if check_win(test_grid, opponent_colour):
+        if check_win(test_grid, opponent_colour)[0]:
             return col
 
     # Priority 3: Pick a random column that is'nt full, with preference to the inner columns.
@@ -69,29 +89,30 @@ def check_win(grid, colour):
     for i in range(6):
         for j in range(4):
             if grid[i][j] == colour and grid[i][j+1] == colour and grid[i][j+2] == colour and grid[i][j+3] == colour:
-                return True
+                return True, [(i, j), (i, j+1), (i, j+2), (i, j+3)]
 
     # Check vertical win
     for i in range(3):
         for j in range(7):
             if grid[i][j] == colour and grid[i+1][j] == colour and grid[i+2][j] == colour and grid[i+3][j] == colour:
-                return True
+                return True, [(i, j), (i+1, j), (i+2, j), (i+3, j)]
 
     # Check horizontal down right win
     for i in range(3):
         for j in range(4):
             if grid[i][j] == colour and grid[i+1][j+1] == colour and grid[i+2][j+2] == colour and grid[i+3][j+3] == colour:
-                return True
+                return True, [(i, j), (i+1, j+1), (i+2, j+2), (i+3, j+3)]
 
     # Check horizontal down left win
     for i in range(3):
         for j in range(3, 7):
             if grid[i][j] == colour and grid[i+1][j-1] == colour and grid[i+2][j-2] == colour and grid[i+3][j-3] == colour:
-                return True
-    return False
+                return True, [(i, j), (i+1, j-1), (i+2, j-2), (i+3, j-3)]
+    return False, []
 
 
 def check_draw(grid):
+    # If the top row is full and there is no win, then it's a draw.
     empty_slots = 0
     for num in grid[0]:
         if num == 0:
@@ -153,7 +174,9 @@ def play():
 
             print_grid(grid)
 
-            if check_win(grid, colour):
+            won, winning_pieces = check_win(grid, colour)
+            if won:
+                print_grid(grid, winning_pieces)
                 print(f"Player {player} wins!")
                 break
 
